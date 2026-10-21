@@ -1,0 +1,272 @@
+[
+  {
+    "label": "① 简单查询",
+    "question": "全校有多少学生？",
+    "answer": "**结论：全校共有 30 名学生。**\n\n依据：\n- 使用 `students` 表（列：`id` 主键、`name`、`class_id` 外键指向 `classes.id`）。\n- 执行 `SELECT COUNT(*) , COUNT(DISTINCT id) FROM students`，两个结果都是 30，说明表里 30 条记录、学号无重复，即 30 名不重复的学生。\n- 补充：这些学生分布在 `classes` 表的 5 个班级中（`classes` 表共 5 行）。",
+    "ok": true,
+    "steps": 4,
+    "elapsed_sec": 3.8,
+    "tool_chain": "list_tables → get_table_schema → execute_sql_query",
+    "trace": [
+      {
+        "step": 1,
+        "thought": "先看看这个库里有哪些表，别急着写 SQL。",
+        "action": "list_tables",
+        "action_input": {},
+        "observation": "{\"ok\": true, \"tables\": [\"classes\", \"scores\", \"students\", \"teachers\"], \"row_counts\": {\"classes\": 5, \"scores\": 148, \"students\": 30, \"teachers\": 6}}"
+      },
+      {
+        "step": 2,
+        "thought": "不确定 students 的结构，先查它的列、外键和样例数据。",
+        "action": "get_table_schema",
+        "action_input": {
+          "table_name": "students"
+        },
+        "observation": "{\"ok\": true, \"table\": \"students\", \"columns\": [{\"name\": \"id\", \"type\": \"INTEGER\", \"not_null\": false, \"primary_key\": true}, {\"name\": \"name\", \"type\": \"TEXT\", \"not_null\": true, \"primary_key\": false}, {\"name\": \"class_id\", \"type\": \"INTEGER\", \"not_null\": true, \"primary_key\": false}], \"foreign_keys\": [{\"column\": \"class_id\", \"references_table\": \"classes\", \"references_column\": \"id\"}], \"row_count\": 30, \"sample_rows\": [{\"id\": 1, \"name\": \"张三\", \"class_id\": 1}, {\"id\": 2, \"name\": \"李四\", \"class_id\": 1}]}"
+      },
+      {
+        "step": 3,
+        "thought": "表结构已经清楚，直接跑查询拿数据。",
+        "action": "execute_sql_query",
+        "action_input": {
+          "sql": "SELECT COUNT(*) AS student_count, COUNT(DISTINCT id) AS distinct_ids FROM students"
+        },
+        "observation": "{\"ok\": true, \"columns\": [\"student_count\", \"distinct_ids\"], \"rows\": [[30, 30]], \"row_count\": 1, \"truncated\": false}"
+      }
+    ]
+  },
+  {
+    "label": "② 单表聚合",
+    "question": "全校数学平均分是多少？",
+    "answer": "**结论：全校数学平均分是 75.67 分。**\n\n依据：\n- 使用 `scores` 表，筛选 `subject = '数学'` 的记录。\n- 统计口径：按每条数学成绩记录直接求平均（`AVG(score)`），共 **30 条**数学成绩记录，最低 35 分，最高 99 分。\n- 补充参考：全校 5 个科目中，数学平均分（75.67）最高，历史 75.66 紧随其后，物理 73.37、编程 73.34、英语 74.87。\n\n注：数学成绩记录数为 30，与 `students` 表的 30 名学生数量一致，说明每名学生都有一条数学成绩，因此该平均值也等于「先算每个学生数学分、再求平均」的结果。",
+    "ok": true,
+    "steps": 4,
+    "elapsed_sec": 5.0,
+    "tool_chain": "list_tables → get_table_schema → execute_sql_query",
+    "trace": [
+      {
+        "step": 1,
+        "thought": "先看看这个库里有哪些表，别急着写 SQL。",
+        "action": "list_tables",
+        "action_input": {},
+        "observation": "{\"ok\": true, \"tables\": [\"classes\", \"scores\", \"students\", \"teachers\"], \"row_counts\": {\"classes\": 5, \"scores\": 148, \"students\": 30, \"teachers\": 6}}"
+      },
+      {
+        "step": 2,
+        "thought": "不确定 scores 的结构，先查它的列、外键和样例数据。",
+        "action": "get_table_schema",
+        "action_input": {
+          "table_name": "scores"
+        },
+        "observation": "{\"ok\": true, \"table\": \"scores\", \"columns\": [{\"name\": \"id\", \"type\": \"INTEGER\", \"not_null\": false, \"primary_key\": true}, {\"name\": \"student_id\", \"type\": \"INTEGER\", \"not_null\": true, \"primary_key\": false}, {\"name\": \"subject\", \"type\": \"TEXT\", \"not_null\": true, \"primary_key\": false}, {\"name\": \"score\", \"type\": \"REAL\", \"not_null\": true, \"primary_key\": false}], \"foreign_keys\": [{\"column\": \"student_id\", \"references_table\": \"students\", \"references_column\": \"id\"}], \"row_count\": 148, \"sample_rows\": [{\"id\": 1, \"student_id\": 1, \"subject\": \"数学\", \"score\": 99.0}, {\"id\": 2, \"student_id\": 1, \"subject\": \"英语\", \"score\": 88.0}]}"
+      },
+      {
+        "step": 3,
+        "thought": "表结构已经清楚，直接跑查询拿数据。",
+        "action": "execute_sql_query",
+        "action_input": {
+          "sql": "SELECT subject, COUNT(*) AS cnt, ROUND(AVG(score),2) AS avg_score, MIN(score) AS min_score, MAX(score) AS max_score FROM scores GROUP BY subject"
+        },
+        "observation": "{\"ok\": true, \"columns\": [\"subject\", \"cnt\", \"avg_score\", \"min_score\", \"max_score\"], \"rows\": [[\"历史\", 29, 75.66, 50.0, 95.0], [\"数学\", 30, 75.67, 35.0, 99.0], [\"物理\", 30, 73.37, 40.0, 95.0], [\"编程\", 29, 73.34, 38.0, 100.0], [\"英语\", 30, 74.87, 38.0, 92.0]], \"row_count\": 5, \"truncated\": false}"
+      }
+    ]
+  },
+  {
+    "label": "③ 多表 JOIN（核心）",
+    "question": "张老师带的班里，编程成绩前三名是谁？",
+    "answer": "**结论：张老师所带班级的编程成绩前三名是：**\n\n| 排名 | 学生 | 班级 | 编程成绩 |\n|---|---|---|---|\n| 1 | 韩八 | 三班 | 94.0 |\n| 2 | 朱十 | 三班 | 92.0 |\n| 3 | 吕四 | 四班 | 89.0 |\n\n**依据：**\n- 张老师（teachers.id = 3）带两个班：三班（classes.id = 3）和四班（classes.id = 4）。\n- 关联路径：`scores.student_id → students.id → students.class_id → classes.teacher_id`。\n- 筛选条件：`classes.teacher_id = 3` 且 `scores.subject = '编程'`（库中科目值确认为中文「编程」）。\n- 统计口径：按每条编程成绩记录排序，`ORDER BY score DESC` 取前 3。两个班共有 12 条编程成绩记录，每个学生只有一条编程成绩，因此不存在同一学生多条记录需要合并的情况。\n- 第 4 名余六（四班，87.0）与第 3 名相差 2 分，未进入前三。",
+    "ok": true,
+    "steps": 5,
+    "elapsed_sec": 8.1,
+    "tool_chain": "list_tables → get_table_schema → get_table_schema → get_table_schema → get_table_schema → execute_sql_query → execute_sql_query → execute_sql_query",
+    "trace": [
+      {
+        "step": 1,
+        "thought": "先看看这个库里有哪些表，别急着写 SQL。",
+        "action": "list_tables",
+        "action_input": {},
+        "observation": "{\"ok\": true, \"tables\": [\"classes\", \"scores\", \"students\", \"teachers\"], \"row_counts\": {\"classes\": 5, \"scores\": 148, \"students\": 30, \"teachers\": 6}}"
+      },
+      {
+        "step": 2,
+        "thought": "不确定 teachers 的结构，先查它的列、外键和样例数据。",
+        "action": "get_table_schema",
+        "action_input": {
+          "table_name": "teachers"
+        },
+        "observation": "{\"ok\": true, \"table\": \"teachers\", \"columns\": [{\"name\": \"id\", \"type\": \"INTEGER\", \"not_null\": false, \"primary_key\": true}, {\"name\": \"name\", \"type\": \"TEXT\", \"not_null\": true, \"primary_key\": false}], \"foreign_keys\": [], \"row_count\": 6, \"sample_rows\": [{\"id\": 1, \"name\": \"王老师\"}, {\"id\": 2, \"name\": \"李老师\"}]}"
+      },
+      {
+        "step": 2,
+        "thought": "不确定 classes 的结构，先查它的列、外键和样例数据。",
+        "action": "get_table_schema",
+        "action_input": {
+          "table_name": "classes"
+        },
+        "observation": "{\"ok\": true, \"table\": \"classes\", \"columns\": [{\"name\": \"id\", \"type\": \"INTEGER\", \"not_null\": false, \"primary_key\": true}, {\"name\": \"class_name\", \"type\": \"TEXT\", \"not_null\": true, \"primary_key\": false}, {\"name\": \"teacher_id\", \"type\": \"INTEGER\", \"not_null\": true, \"primary_key\": false}], \"foreign_keys\": [{\"column\": \"teacher_id\", \"references_table\": \"teachers\", \"references_column\": \"id\"}], \"row_count\": 5, \"sample_rows\": [{\"id\": 1, \"class_name\": \"一班\", \"teacher_id\": 1}, {\"id\": 2, \"class_name\": \"二班\", \"teacher_id\": 2}]}"
+      },
+      {
+        "step": 2,
+        "thought": "不确定 students 的结构，先查它的列、外键和样例数据。",
+        "action": "get_table_schema",
+        "action_input": {
+          "table_name": "students"
+        },
+        "observation": "{\"ok\": true, \"table\": \"students\", \"columns\": [{\"name\": \"id\", \"type\": \"INTEGER\", \"not_null\": false, \"primary_key\": true}, {\"name\": \"name\", \"type\": \"TEXT\", \"not_null\": true, \"primary_key\": false}, {\"name\": \"class_id\", \"type\": \"INTEGER\", \"not_null\": true, \"primary_key\": false}], \"foreign_keys\": [{\"column\": \"class_id\", \"references_table\": \"classes\", \"references_column\": \"id\"}], \"row_count\": 30, \"sample_rows\": [{\"id\": 1, \"name\": \"张三\", \"class_id\": 1}, {\"id\": 2, \"name\": \"李四\", \"class_id\": 1}]}"
+      },
+      {
+        "step": 2,
+        "thought": "不确定 scores 的结构，先查它的列、外键和样例数据。",
+        "action": "get_table_schema",
+        "action_input": {
+          "table_name": "scores"
+        },
+        "observation": "{\"ok\": true, \"table\": \"scores\", \"columns\": [{\"name\": \"id\", \"type\": \"INTEGER\", \"not_null\": false, \"primary_key\": true}, {\"name\": \"student_id\", \"type\": \"INTEGER\", \"not_null\": true, \"primary_key\": false}, {\"name\": \"subject\", \"type\": \"TEXT\", \"not_null\": true, \"primary_key\": false}, {\"name\": \"score\", \"type\": \"REAL\", \"not_null\": true, \"primary_key\": false}], \"foreign_keys\": [{\"column\": \"student_id\", \"references_table\": \"students\", \"references_column\": \"id\"}], \"row_count\": 148, \"sample_rows\": [{\"id\": 1, \"student_id\": 1, \"subject\": \"数学\", \"score\": 99.0}, {\"id\": 2, \"student_id\": 1, \"subject\": \"英语\", \"score\": 88.0}]}"
+      },
+      {
+        "step": 3,
+        "thought": "表结构已经清楚，直接跑查询拿数据。",
+        "action": "execute_sql_query",
+        "action_input": {
+          "sql": "SELECT t.id, t.name, c.id AS class_id, c.class_name FROM teachers t LEFT JOIN classes c ON c.teacher_id = t.id WHERE t.name LIKE '%张%'"
+        },
+        "observation": "{\"ok\": true, \"columns\": [\"id\", \"name\", \"class_id\", \"class_name\"], \"rows\": [[3, \"张老师\", 3, \"三班\"], [3, \"张老师\", 4, \"四班\"]], \"row_count\": 2, \"truncated\": false}"
+      },
+      {
+        "step": 3,
+        "thought": "表结构已经清楚，直接跑查询拿数据。",
+        "action": "execute_sql_query",
+        "action_input": {
+          "sql": "SELECT DISTINCT subject FROM scores"
+        },
+        "observation": "{\"ok\": true, \"columns\": [\"subject\"], \"rows\": [[\"数学\"], [\"英语\"], [\"物理\"], [\"历史\"], [\"编程\"]], \"row_count\": 5, \"truncated\": false}"
+      },
+      {
+        "step": 4,
+        "thought": "表结构已经清楚，直接跑查询拿数据。",
+        "action": "execute_sql_query",
+        "action_input": {
+          "sql": "SELECT s.name AS student_name, c.class_name, sc.score FROM scores sc JOIN students s ON s.id = sc.student_id JOIN classes c ON c.id = s.class_id WHERE c.teacher_id = 3 AND sc.subject = '编程' ORDER BY sc.score DESC"
+        },
+        "observation": "{\"ok\": true, \"columns\": [\"student_name\", \"class_name\", \"score\"], \"rows\": [[\"韩八\", \"三班\", 94.0], [\"朱十\", \"三班\", 92.0], [\"吕四\", \"四班\", 89.0], [\"余六\", \"四班\", 87.0], [\"蒋六\", \"三班\", 85.0], [\"许二\", \"四班\", 80.0], [\"何三\", \"四班\", 75.0], [\"秦一\", \"三班\", 71.0], [\"沈七\", \"三班\", 62.0], [\"施五\", \"四班\", 58.0], [\"杨九\", \"三班\", 50.0], [\"尤七\", \"四班\", 48.0]], \"row_count\": 12, \"truncated\": false}"
+      }
+    ]
+  },
+  {
+    "label": "④ 多表聚合 + 排序",
+    "question": "哪个班平均成绩最高？",
+    "answer": "**结论：一班平均成绩最高，平均分 78.26 分。**\n\n各班排名（按平均分从高到低）：\n\n| 排名 | 班级 | 平均分 | 成绩条数 | 最低分 | 最高分 |\n|---|---|---|---|---|---|\n| 1 | 一班 | 78.26 | 34 | 55 | 99 |\n| 2 | 三班 | 78.20 | 30 | 50 | 95 |\n| 3 | 四班 | 74.80 | 30 | 48 | 93 |\n| 4 | 二班 | 73.12 | 34 | 38 | 100 |\n| 5 | 五班 | 65.05 | 20 | 35 | 96 |\n\n**统计口径与依据：**\n- 用到的表：`scores`（成绩）→ `students`（学生，通过 `student_id` 关联）→ `classes`（班级，通过 `class_id` 关联）。\n- 统计口径：**按每条成绩记录求平均**（即把该班所有学生的所有科目成绩放在一起算算术平均），排序依据是 `AVG(score)` 降序。\n- 需要注意的两点：\n  1. 一班（78.26）和三班（78.20）差距只有 0.06 分，几乎持平，属于统计上很接近的结果。\n  2. 各班成绩条数不一致（五班只有 20 条，其他班 30–34 条），说明有的学生缺考某些科目，因此这个「按记录平均」的口径会让缺考多的班级权重偏低。如果你希望改成「先算每个学生的平均分，再按班求平均」的口径，我可以再跑一次对比。",
+    "ok": true,
+    "steps": 4,
+    "elapsed_sec": 6.0,
+    "tool_chain": "list_tables → get_table_schema → get_table_schema → get_table_schema → execute_sql_query",
+    "trace": [
+      {
+        "step": 1,
+        "thought": "先看看这个库里有哪些表，别急着写 SQL。",
+        "action": "list_tables",
+        "action_input": {},
+        "observation": "{\"ok\": true, \"tables\": [\"classes\", \"scores\", \"students\", \"teachers\"], \"row_counts\": {\"classes\": 5, \"scores\": 148, \"students\": 30, \"teachers\": 6}}"
+      },
+      {
+        "step": 2,
+        "thought": "不确定 classes 的结构，先查它的列、外键和样例数据。",
+        "action": "get_table_schema",
+        "action_input": {
+          "table_name": "classes"
+        },
+        "observation": "{\"ok\": true, \"table\": \"classes\", \"columns\": [{\"name\": \"id\", \"type\": \"INTEGER\", \"not_null\": false, \"primary_key\": true}, {\"name\": \"class_name\", \"type\": \"TEXT\", \"not_null\": true, \"primary_key\": false}, {\"name\": \"teacher_id\", \"type\": \"INTEGER\", \"not_null\": true, \"primary_key\": false}], \"foreign_keys\": [{\"column\": \"teacher_id\", \"references_table\": \"teachers\", \"references_column\": \"id\"}], \"row_count\": 5, \"sample_rows\": [{\"id\": 1, \"class_name\": \"一班\", \"teacher_id\": 1}, {\"id\": 2, \"class_name\": \"二班\", \"teacher_id\": 2}]}"
+      },
+      {
+        "step": 2,
+        "thought": "不确定 students 的结构，先查它的列、外键和样例数据。",
+        "action": "get_table_schema",
+        "action_input": {
+          "table_name": "students"
+        },
+        "observation": "{\"ok\": true, \"table\": \"students\", \"columns\": [{\"name\": \"id\", \"type\": \"INTEGER\", \"not_null\": false, \"primary_key\": true}, {\"name\": \"name\", \"type\": \"TEXT\", \"not_null\": true, \"primary_key\": false}, {\"name\": \"class_id\", \"type\": \"INTEGER\", \"not_null\": true, \"primary_key\": false}], \"foreign_keys\": [{\"column\": \"class_id\", \"references_table\": \"classes\", \"references_column\": \"id\"}], \"row_count\": 30, \"sample_rows\": [{\"id\": 1, \"name\": \"张三\", \"class_id\": 1}, {\"id\": 2, \"name\": \"李四\", \"class_id\": 1}]}"
+      },
+      {
+        "step": 2,
+        "thought": "不确定 scores 的结构，先查它的列、外键和样例数据。",
+        "action": "get_table_schema",
+        "action_input": {
+          "table_name": "scores"
+        },
+        "observation": "{\"ok\": true, \"table\": \"scores\", \"columns\": [{\"name\": \"id\", \"type\": \"INTEGER\", \"not_null\": false, \"primary_key\": true}, {\"name\": \"student_id\", \"type\": \"INTEGER\", \"not_null\": true, \"primary_key\": false}, {\"name\": \"subject\", \"type\": \"TEXT\", \"not_null\": true, \"primary_key\": false}, {\"name\": \"score\", \"type\": \"REAL\", \"not_null\": true, \"primary_key\": false}], \"foreign_keys\": [{\"column\": \"student_id\", \"references_table\": \"students\", \"references_column\": \"id\"}], \"row_count\": 148, \"sample_rows\": [{\"id\": 1, \"student_id\": 1, \"subject\": \"数学\", \"score\": 99.0}, {\"id\": 2, \"student_id\": 1, \"subject\": \"英语\", \"score\": 88.0}]}"
+      },
+      {
+        "step": 3,
+        "thought": "表结构已经清楚，直接跑查询拿数据。",
+        "action": "execute_sql_query",
+        "action_input": {
+          "sql": "SELECT c.class_name, COUNT(*) AS 成绩条数, ROUND(AVG(s.score), 2) AS 平均分, ROUND(MIN(s.score), 2) AS 最低分, ROUND(MAX(s.score), 2) AS 最高分 FROM scores s JOIN students st ON s.student_id = st.id JOIN classes c ON st.class_id = c.id GROUP BY c.id, c.class_name ORDER BY 平均分 DESC"
+        },
+        "observation": "{\"ok\": true, \"columns\": [\"class_name\", \"成绩条数\", \"平均分\", \"最低分\", \"最高分\"], \"rows\": [[\"一班\", 34, 78.26, 55.0, 99.0], [\"三班\", 30, 78.2, 50.0, 95.0], [\"四班\", 30, 74.8, 48.0, 93.0], [\"二班\", 34, 73.12, 38.0, 100.0], [\"五班\", 20, 65.05, 35.0, 96.0]], \"row_count\": 5, \"truncated\": false}"
+      }
+    ]
+  },
+  {
+    "label": "⑤ 数据探索",
+    "question": "有没有缺考的学生？",
+    "answer": "**结论：有 2 条缺考记录，涉及 2 名学生。**\n\n| 学生 | 学号(id) | 班级 | 缺考科目 |\n|---|---|---|---|\n| 王明 | 7 | 1 班 | 编程 |\n| 卫五 | 14 | 2 班 | 历史 |\n\n**依据与统计口径：**\n- 用到的表：`students`（30 人）、`scores`（148 条成绩记录）。\n- 库里共有 5 个科目：数学、物理、英语、历史、编程。其中数学、物理、英语各有 30 条记录，历史 29 条，编程 29 条，因此历史、编程各少 1 条。\n- 判定方法：以「全体学生 × 全部科目」为完整组合，用 `LEFT JOIN scores` 找出没有对应成绩记录的组合，得到上面 2 条。\n- 补充说明：`scores.score` 列是 NOT NULL，且各科 `score IS NULL` 的计数都是 0，所以**不存在「有记录但分数为空」的情况**，缺考表现为「整条成绩记录缺失」。另外，所有学生都至少有 4 条成绩记录，没有整科全缺或完全无成绩的学生。",
+    "ok": true,
+    "steps": 5,
+    "elapsed_sec": 6.7,
+    "tool_chain": "list_tables → get_table_schema → get_table_schema → execute_sql_query → execute_sql_query → execute_sql_query",
+    "trace": [
+      {
+        "step": 1,
+        "thought": "先看看这个库里有哪些表，别急着写 SQL。",
+        "action": "list_tables",
+        "action_input": {},
+        "observation": "{\"ok\": true, \"tables\": [\"classes\", \"scores\", \"students\", \"teachers\"], \"row_counts\": {\"classes\": 5, \"scores\": 148, \"students\": 30, \"teachers\": 6}}"
+      },
+      {
+        "step": 2,
+        "thought": "不确定 scores 的结构，先查它的列、外键和样例数据。",
+        "action": "get_table_schema",
+        "action_input": {
+          "table_name": "scores"
+        },
+        "observation": "{\"ok\": true, \"table\": \"scores\", \"columns\": [{\"name\": \"id\", \"type\": \"INTEGER\", \"not_null\": false, \"primary_key\": true}, {\"name\": \"student_id\", \"type\": \"INTEGER\", \"not_null\": true, \"primary_key\": false}, {\"name\": \"subject\", \"type\": \"TEXT\", \"not_null\": true, \"primary_key\": false}, {\"name\": \"score\", \"type\": \"REAL\", \"not_null\": true, \"primary_key\": false}], \"foreign_keys\": [{\"column\": \"student_id\", \"references_table\": \"students\", \"references_column\": \"id\"}], \"row_count\": 148, \"sample_rows\": [{\"id\": 1, \"student_id\": 1, \"subject\": \"数学\", \"score\": 99.0}, {\"id\": 2, \"student_id\": 1, \"subject\": \"英语\", \"score\": 88.0}]}"
+      },
+      {
+        "step": 2,
+        "thought": "不确定 students 的结构，先查它的列、外键和样例数据。",
+        "action": "get_table_schema",
+        "action_input": {
+          "table_name": "students"
+        },
+        "observation": "{\"ok\": true, \"table\": \"students\", \"columns\": [{\"name\": \"id\", \"type\": \"INTEGER\", \"not_null\": false, \"primary_key\": true}, {\"name\": \"name\", \"type\": \"TEXT\", \"not_null\": true, \"primary_key\": false}, {\"name\": \"class_id\", \"type\": \"INTEGER\", \"not_null\": true, \"primary_key\": false}], \"foreign_keys\": [{\"column\": \"class_id\", \"references_table\": \"classes\", \"references_column\": \"id\"}], \"row_count\": 30, \"sample_rows\": [{\"id\": 1, \"name\": \"张三\", \"class_id\": 1}, {\"id\": 2, \"name\": \"李四\", \"class_id\": 1}]}"
+      },
+      {
+        "step": 3,
+        "thought": "表结构已经清楚，直接跑查询拿数据。",
+        "action": "execute_sql_query",
+        "action_input": {
+          "sql": "SELECT subject, COUNT(*) AS cnt, SUM(CASE WHEN score IS NULL THEN 1 ELSE 0 END) AS null_cnt, MIN(score) AS min_score, MAX(score) AS max_score FROM scores GROUP BY subject"
+        },
+        "observation": "{\"ok\": true, \"columns\": [\"subject\", \"cnt\", \"null_cnt\", \"min_score\", \"max_score\"], \"rows\": [[\"历史\", 29, 0, 50.0, 95.0], [\"数学\", 30, 0, 35.0, 99.0], [\"物理\", 30, 0, 40.0, 95.0], [\"编程\", 29, 0, 38.0, 100.0], [\"英语\", 30, 0, 38.0, 92.0]], \"row_count\": 5, \"truncated\": false}"
+      },
+      {
+        "step": 3,
+        "thought": "表结构已经清楚，直接跑查询拿数据。",
+        "action": "execute_sql_query",
+        "action_input": {
+          "sql": "SELECT s.id, s.name, s.class_id, COUNT(sc.id) AS record_cnt FROM students s LEFT JOIN scores sc ON sc.student_id = s.id GROUP BY s.id, s.name, s.class_id ORDER BY record_cnt ASC, s.id"
+        },
+        "observation": "{\"ok\": true, \"columns\": [\"id\", \"name\", \"class_id\", \"record_cnt\"], \"rows\": [[7, \"王明\", 1, 4], [14, \"卫五\", 2, 4], [1, \"张三\", 1, 5], [2, \"李四\", 1, 5], [3, \"王五\", 1, 5], [4, \"赵六\", 1, 5], [5, \"孙七\", 1, 5], [6, \"钱八\", 1, 5], [8, \"周九\", 2, 5], [9, \"吴十\", 2, 5], [10, \"郑一\", 2, 5], [11, \"冯二\", 2, 5], [12, \"陈三\", 2, 5], [13, \"褚四\", 2, 5], [15, \"蒋六\", 3, 5], [16, \"沈七\", 3, 5], [17, \"韩八\", 3, 5], [18, \"杨九\", 3, 5], [19, \"朱十\", 3, 5], [20, \"秦一\", 3, 5], [21, \"许二\", 4, 5], [22, \"何三\", 4, 5], [23, \"吕四\", 4, 5], [24, \"施五\", 4, 5], [25, \"余六\", 4, 5], [26, \"尤七\", 4, 5], [27, \"任八\", 5, 5], [28, \"柳九\", 5, 5], [29, \"鲍十\", 5, 5], [30, \"水一\", 5, 5]], \"row_count\": 30, \"truncated\": false}"
+      },
+      {
+        "step": 4,
+        "thought": "表结构已经清楚，直接跑查询拿数据。",
+        "action": "execute_sql_query",
+        "action_input": {
+          "sql": "SELECT s.id, s.name, s.class_id, sub.subject FROM students s CROSS JOIN (SELECT DISTINCT subject FROM scores) sub LEFT JOIN scores sc ON sc.student_id = s.id AND sc.subject = sub.subject WHERE sc.id IS NULL ORDER BY s.id, sub.subject"
+        },
+        "observation": "{\"ok\": true, \"columns\": [\"id\", \"name\", \"class_id\", \"subject\"], \"rows\": [[7, \"王明\", 1, \"编程\"], [14, \"卫五\", 2, \"历史\"]], \"row_count\": 2, \"truncated\": false}"
+      }
+    ]
+  }
+]

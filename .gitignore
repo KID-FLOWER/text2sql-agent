@@ -1,0 +1,25 @@
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# 真实密钥
+.env
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# 生成物
+school.db
+*.log
+
+# 截图（本地留档，不入库）
+screenshots/*
+!screenshots/.gitkeep
+
+# 编辑器
+.vscode/
+.idea/
