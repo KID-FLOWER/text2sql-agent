@@ -53,3 +53,4 @@ python agent_loop.py "全校有多少学生？"   :: 直接问一句
 
 - `.env` 已加入 `.gitignore`，仓库里只有 `.env.example`（占位符）。
 - `school.db` 不入库，随时可由 `init_db.py` 重建。
+> 这是我的第一次 Pull Request 练习。
